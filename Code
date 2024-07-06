@@ -1,0 +1,58 @@
+import numpy as np
+
+# Dummy data: User ratings for movies (rows) by users (columns)
+# Each row corresponds to a movie, each column corresponds to a user
+# The ratings are on a scale of 1 to 5
+ratings = np.array([
+    [5, 4, 0, 0, 3],  # Movie 1 ratings by users
+    [0, 5, 4, 0, 0],  # Movie 2 ratings by users
+    [4, 0, 5, 0, 0],  # Movie 3 ratings by users
+    [0, 0, 4, 5, 0],  # Movie 4 ratings by users
+    [0, 0, 0, 5, 4]   # Movie 5 ratings by users
+])
+
+# Function to recommend movies to a user based on collaborative filtering
+def recommend_movies(ratings, user_id, num_recommendations=2):
+    # Compute mean ratings across all users
+    mean_ratings = np.mean(ratings, axis=1)
+
+    # Compute similarity between the target user and all other users using Pearson correlation
+    similarity = []
+    for i in range(ratings.shape[1]):
+        if i != user_id:
+            similarity.append((i, np.corrcoef(ratings[:,user_id], ratings[:,i])[0,1]))
+    
+    # Sort users by similarity in descending order
+    similarity.sort(key=lambda x: x[1], reverse=True)
+
+    # Identify movies that the user hasn't rated yet
+    unrated_movies = np.where(ratings[:, user_id] == 0)[0]
+
+    # Predict ratings for unrated movies based on similar users
+    recommendations = []
+    for movie in unrated_movies:
+        predicted_rating = 0
+        total_similarity = 0
+        for sim_user, sim_score in similarity:
+            if ratings[movie, sim_user] != 0:
+                predicted_rating += sim_score * (ratings[movie, sim_user] - mean_ratings[movie])
+                total_similarity += np.abs(sim_score)
+                if total_similarity > 0:
+                    predicted_rating /= total_similarity
+                    recommendations.append((movie, predicted_rating + mean_ratings[movie]))
+
+    # Sort recommendations by predicted rating in descending order
+    recommendations.sort(key=lambda x: x[1], reverse=True)
+
+    # Extract top recommendations
+    top_recommendations = [movie for movie, _ in recommendations[:num_recommendations]]
+
+    return top_recommendations
+
+# Example usage:
+user_id = 2  # User for whom we want to recommend movies
+recommended_movies = recommend_movies(ratings, user_id)
+
+print(f"Recommended movies for user {user_id}:")
+for movie_id in recommended_movies:
+    print(f"Movie {movie_id + 1}")
